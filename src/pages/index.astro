@@ -1,0 +1,399 @@
+---
+import Base from "../layouts/Base.astro";
+import ToolCard from "../components/ToolCard.astro";
+import ToolBadge from "../components/ToolBadge.astro";
+import Newsletter from "../components/Newsletter.astro";
+import { categories } from "../data/categories";
+import {
+  tools,
+  toolBySlug,
+  toolsInCategory,
+  featureCatalog,
+} from "../data/tools";
+import { featuredComparisons } from "../data/comparisons";
+import { getCollection } from "astro:content";
+
+const featuredTools = [...tools]
+  .sort((a, b) => b.rating - a.rating)
+  .slice(0, 6);
+
+const latestArticles = (
+  await getCollection("articles", ({ data }) => !data.draft)
+)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+const stats = [
+  { value: `${tools.length}`, label: "Tools reviewed" },
+  { value: `${categories.length}`, label: "Categories" },
+  { value: `${featureCatalog.length}`, label: "Features compared" },
+  {
+    value: `${latestArticles.length > 0 ? latestArticles.length : 0}+`,
+    label: "Expert guides",
+  },
+];
+
+const valueProps = [
+  {
+    title: "Independent comparisons",
+    body: "No pay-to-win rankings. Every tool is scored on the same criteria so you can trust what you read.",
+    icon: "M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
+  },
+  {
+    title: "Side-by-side features",
+    body: "See exactly how two tools stack up, feature for feature, price for price, in one clean table.",
+    icon: "M4 5h7v14H4zM13 5h7v14h-7z",
+  },
+  {
+    title: "Pricing in plain English",
+    body: "Starting prices, free tiers, and the gotchas that inflate the bill, decoded, not buried.",
+    icon: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  },
+  {
+    title: "Guides from practitioners",
+    body: "Buying guides and explainers written for marketers, so you shortlist faster and choose with confidence.",
+    icon: "M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM14 3v6h6",
+  },
+];
+---
+
+<Base
+  title="TheMarketStack"
+  description="Compare the best marketing SaaS tools side-by-side, features, pricing, ratings, and a searchable directory across every marketing category."
+>
+  <!-- Hero -->
+  <section class="relative overflow-hidden border-b border-ink-100">
+    <div class="absolute inset-0 bg-dotted opacity-60"></div>
+    <div
+      class="absolute inset-0 bg-gradient-to-b from-ink-50/0 via-ink-50/50 to-ink-50"
+    >
+    </div>
+    <div
+      class="relative mx-auto max-w-6xl px-4 py-28 text-center sm:px-6 sm:py-36"
+    >
+      <span
+        class="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700"
+      >
+        <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
+        {tools.length} tools across {categories.length} categories
+      </span>
+      <h1
+        class="mx-auto mt-8 max-w-3xl text-5xl font-semibold leading-[1.05] text-ink-900 sm:text-7xl"
+      >
+        The directory for
+        <span
+          class="bg-gradient-to-r from-ink-900 to-ink-500 bg-clip-text text-transparent"
+        >
+          marketing software</span
+        >
+      </h1>
+      <p class="mx-auto mt-8 max-w-xl text-lg text-ink-500">
+        Search, compare, and choose the right marketing SaaS, independent
+        side-by-side comparisons of features, pricing, and ratings.
+      </p>
+
+      <!-- Search block -->
+      <form
+        action="/tools"
+        method="get"
+        class="mx-auto mt-10 flex max-w-xl items-center gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-sm focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-100"
+      >
+        <span class="pl-3 text-ink-400" aria-hidden="true">
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 21l-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"
+            ></path>
+          </svg>
+        </span>
+        <input
+          type="search"
+          name="q"
+          placeholder="Search for a tool, e.g. Mailchimp or SEO…"
+          aria-label="Search tools"
+          class="flex-1 bg-transparent px-1 py-2 text-base outline-none placeholder:text-ink-400"
+        />
+        <button
+          type="submit"
+          class="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white transition hover:bg-brand-700"
+        >
+          Search
+        </button>
+      </form>
+      <p class="mt-4 text-sm text-ink-400">
+        Popular:
+        {
+          ["email-marketing", "seo", "social-media"].map((slug, i) => (
+            <>
+              {i > 0 && <span class="text-ink-300"> · </span>}
+              <a
+                href={`/categories/${slug}`}
+                class="font-medium text-brand-600 hover:underline"
+              >
+                {categories.find((c) => c.slug === slug)?.shortName}
+              </a>
+            </>
+          ))
+        }
+      </p>
+    </div>
+  </section>
+
+  <!-- Stats strip -->
+  <section class="border-b border-ink-100 bg-white">
+    <div
+      class="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-ink-100 px-4 sm:grid-cols-4 sm:px-6"
+    >
+      {
+        stats.map((s) => (
+          <div class="px-4 py-8 text-center">
+            <p class="text-3xl font-semibold text-ink-900">{s.value}</p>
+            <p class="mt-1 text-sm text-ink-400">{s.label}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+    <div class="flex items-end justify-between">
+      <div>
+        <h2 class="text-3xl font-semibold text-ink-900">Browse by category</h2>
+        <p class="mt-2 text-ink-500">
+          Every major slice of the modern marketing stack.
+        </p>
+      </div>
+      <a
+        href="/categories"
+        class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
+        >All categories &rarr;</a
+      >
+    </div>
+    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        categories.map((c) => (
+          <a
+            href={`/categories/${c.slug}`}
+            class="group flex items-start gap-4 rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
+          >
+            <span class="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
+              <svg
+                class="h-6 w-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d={c.icon} />
+              </svg>
+            </span>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-ink-900 group-hover:text-brand-700">
+                  {c.name}
+                </h3>
+                <span class="rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-500">
+                  {toolsInCategory(c.slug).length}
+                </span>
+              </div>
+              <p class="mt-1 text-sm text-ink-500">{c.tagline}</p>
+            </div>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Why TheMarketStack -->
+  <section class="border-y border-ink-100 bg-white">
+    <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+      <div class="max-w-2xl">
+        <h2 class="text-3xl font-semibold text-ink-900">Why TheMarketStack</h2>
+        <p class="mt-2 text-ink-500">
+          A directory built to help you decide, not to sell you the highest
+          bidder.
+        </p>
+      </div>
+      <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          valueProps.map((v) => (
+            <div class="rounded-2xl border border-ink-100 bg-white p-6">
+              <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-ink-900 text-white">
+                <svg
+                  class="h-6 w-6"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d={v.icon} />
+                </svg>
+              </span>
+              <h3 class="mt-4 font-semibold text-ink-900">{v.title}</h3>
+              <p class="mt-2 text-sm text-ink-500">{v.body}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Top rated tools -->
+  <section class="border-y border-ink-100 bg-white">
+    <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+      <div class="flex items-end justify-between">
+        <div>
+          <h2 class="text-3xl font-semibold text-ink-900">Top-rated tools</h2>
+          <p class="mt-2 text-ink-500">
+            The highest-scoring platforms across all categories.
+          </p>
+        </div>
+        <a
+          href="/tools"
+          class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
+          >See all &rarr;</a
+        >
+      </div>
+      <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {featuredTools.map((t) => <ToolCard tool={t} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured comparisons -->
+  <section class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+    <div class="flex items-end justify-between">
+      <div>
+        <h2 class="text-3xl font-semibold text-ink-900">
+          Popular head-to-heads
+        </h2>
+        <p class="mt-2 text-ink-500">The matchups marketers research most.</p>
+      </div>
+      <a
+        href="/compare"
+        class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
+        >All comparisons &rarr;</a
+      >
+    </div>
+    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        featuredComparisons.map(([a, b]) => {
+          const ta = toolBySlug(a)!;
+          const tb = toolBySlug(b)!;
+          return (
+            <a
+              href={`/compare/${a}-vs-${b}`}
+              class="group flex items-center justify-between rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
+            >
+              <div class="flex items-center gap-3">
+                <ToolBadge badge={ta.badge} color={ta.badgeColor} size="sm" />
+                <span class="text-xs font-bold text-ink-300">VS</span>
+                <ToolBadge badge={tb.badge} color={tb.badgeColor} size="sm" />
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-semibold text-ink-900">
+                  {ta.name.split(" ")[0]} vs {tb.name.split(" ")[0]}
+                </p>
+                <p class="text-xs text-brand-600 group-hover:underline">
+                  Compare &rarr;
+                </p>
+              </div>
+            </a>
+          );
+        })
+      }
+    </div>
+  </section>
+
+  <!-- Latest guides -->
+  {
+    latestArticles.length > 0 && (
+      <section class="border-t border-ink-100 bg-white">
+        <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+          <div class="flex items-end justify-between">
+            <div>
+              <h2 class="text-3xl font-semibold text-ink-900">Latest guides</h2>
+              <p class="mt-2 text-ink-500">
+                Buying advice and comparisons from our editors.
+              </p>
+            </div>
+            <a
+              href="/resources"
+              class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
+            >
+              All resources &rarr;
+            </a>
+          </div>
+          <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {latestArticles.map((a) => (
+              <a
+                href={`/resources/${a.id}`}
+                class="group flex flex-col rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="w-fit rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+                    {a.data.tag}
+                  </span>
+                  <span class="text-xs text-ink-400">
+                    {fmtDate(a.data.date)}
+                  </span>
+                </div>
+                <h3 class="mt-4 text-lg font-semibold text-ink-900 group-hover:text-brand-700">
+                  {a.data.title}
+                </h3>
+                <p class="mt-2 flex-1 text-sm text-ink-500">
+                  {a.data.description}
+                </p>
+                <span class="mt-4 text-sm font-medium text-brand-600">
+                  Read more &rarr;
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Newsletter -->
+  <Newsletter />
+
+  <!-- Submit a tool CTA -->
+  <section class="mx-auto max-w-6xl px-4 pb-28 sm:px-6">
+    <div
+      class="flex flex-col items-start justify-between gap-6 rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 p-10 text-white sm:flex-row sm:items-center"
+    >
+      <div>
+        <h3 class="text-2xl font-bold">Building a marketing tool?</h3>
+        <p class="mt-3 max-w-xl text-brand-100">
+          Submit your product and we'll review it for inclusion in the
+          directory, free.
+        </p>
+      </div>
+      <a
+        href="/submit"
+        class="inline-block flex-shrink-0 rounded-xl bg-white px-6 py-3 font-semibold text-brand-700 transition hover:bg-brand-50"
+      >
+        Add your tool &rarr;
+      </a>
+    </div>
+  </section>
+</Base>

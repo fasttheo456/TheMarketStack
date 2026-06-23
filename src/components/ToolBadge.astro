@@ -1,0 +1,21 @@
+---
+interface Props {
+  badge: string;
+  /** Kept for API compatibility; the directory uses a monochrome badge. */
+  color?: string;
+  size?: "sm" | "md" | "lg";
+}
+const { badge, size = "md" } = Astro.props;
+const dim = {
+  sm: "h-9 w-9 text-sm rounded-lg",
+  md: "h-12 w-12 text-base rounded-xl",
+  lg: "h-16 w-16 text-xl rounded-2xl",
+}[size];
+---
+
+<span
+  class={`inline-flex flex-shrink-0 items-center justify-center bg-gradient-to-br from-ink-800 to-ink-950 ${dim} font-bold text-white shadow-sm`}
+  aria-hidden="true"
+>
+  {badge}
+</span>
