@@ -4,6 +4,8 @@ import { Icon } from "astro-icon/components";
 import ToolCard from "../components/ToolCard.astro";
 import ToolBadge from "../components/ToolBadge.astro";
 import Newsletter from "../components/Newsletter.astro";
+import Speckles from "../components/Speckles.astro";
+import { tagColor } from "../data/articleTags";
 import { categories } from "../data/categories";
 import { tools, toolBySlug, toolsInCategory } from "../data/tools";
 import { featuredComparisons } from "../data/comparisons";
@@ -25,24 +27,6 @@ const fmtDate = (d: Date) =>
     day: "numeric",
     year: "numeric",
   });
-
-const valueProps = [
-  {
-    title: "Side-by-side features",
-    body: "See how two tools compare feature by feature and price by price, in one table.",
-    icon: "table-2",
-  },
-  {
-    title: "Pricing in plain English",
-    body: "Starting prices, free tiers, and the add-ons that quietly raise the bill, all spelled out.",
-    icon: "tag",
-  },
-  {
-    title: "Guides from practitioners",
-    body: "Buying guides and explainers written for marketers, so you can shortlist faster.",
-    icon: "book-open",
-  },
-];
 
 // Decorative hero backdrop: brand-logo stickers kept in the top & bottom bands
 // (above and below the headline) so they never sit on the text.
@@ -70,16 +54,16 @@ const decorLogos = heroLogoSpec.map((s) => {
 // Small "speckles" sprinkled across the whole hero (tiny, so text stays readable)
 const freckles = [
   "left-[7%] top-[24%] h-2 w-2 bg-ink-200",
-  "left-[28%] top-[16%] h-1.5 w-1.5 bg-orange-400/70",
+  "left-[28%] top-[16%] h-1.5 w-1.5 bg-ink-300",
   "left-[52%] top-[20%] h-1 w-1 bg-ink-300",
   "left-[73%] top-[15%] h-2 w-2 bg-ink-200",
   "left-[93%] top-[28%] h-1.5 w-1.5 bg-ink-300",
   "left-[10%] top-[48%] h-1 w-1 bg-ink-300",
-  "left-[90%] top-[46%] h-1.5 w-1.5 bg-orange-400/60",
+  "left-[90%] top-[46%] h-1.5 w-1.5 bg-ink-300",
   "left-[5%] top-[64%] h-2 w-2 bg-ink-200",
   "left-[31%] top-[62%] h-1 w-1 bg-ink-300",
   "left-[55%] top-[64%] h-1.5 w-1.5 bg-ink-200",
-  "left-[78%] top-[60%] h-1 w-1 bg-orange-400/70",
+  "left-[78%] top-[60%] h-1 w-1 bg-ink-300",
   "left-[20%] top-[86%] h-1.5 w-1.5 bg-ink-300",
   "left-[68%] top-[88%] h-1 w-1 bg-ink-300",
   "left-[48%] top-[90%] h-2 w-2 bg-ink-200",
@@ -87,8 +71,8 @@ const freckles = [
 
 // A couple of playful sticker accents
 const stickers = [
-  { icon: "sparkles", pos: "left-[34%] top-[16%]", cls: "h-5 w-5 -rotate-6 text-orange-400" },
-  { icon: "star", pos: "left-[80%] top-[67%]", cls: "h-4 w-4 rotate-12 text-orange-400" },
+  { icon: "sparkles", pos: "left-[34%] top-[16%]", cls: "h-5 w-5 -rotate-6 text-ink-300" },
+  { icon: "star", pos: "left-[80%] top-[67%]", cls: "h-4 w-4 rotate-12 text-ink-300" },
   { icon: "plus", pos: "left-[8%] top-[52%]", cls: "h-4 w-4 text-ink-300" },
 ];
 ---
@@ -107,7 +91,7 @@ const stickers = [
 
     <!-- Decorative backdrop: brand stickers, speckles & accents (behind the text) -->
     <div
-      class="pointer-events-none absolute inset-0 hidden sm:block"
+      class="pointer-events-none absolute inset-0"
       aria-hidden="true"
     >
       {
@@ -209,84 +193,15 @@ const stickers = [
     </div>
   </section>
 
-  <!-- Categories -->
-  <section class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-    <div class="flex items-end justify-between">
-      <div>
-        <h2 class="text-3xl font-semibold text-ink-900">Browse by category</h2>
-        <p class="mt-2 text-ink-500">
-          Every major slice of the modern marketing stack.
-        </p>
-      </div>
-      <a
-        href="/categories"
-        class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
-        >All categories &rarr;</a
-      >
-    </div>
-    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {
-        categories.map((c) => (
-          <a
-            href={`/categories/${c.slug}`}
-            class="group flex items-start gap-4 rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
-          >
-            <span class="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
-              <Icon name={`lucide:${c.icon}`} class="h-5 w-5" />
-            </span>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="font-semibold text-ink-900 group-hover:text-brand-700">
-                  {c.name}
-                </h3>
-                <span class="rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-500">
-                  {toolsInCategory(c.slug).length}
-                </span>
-              </div>
-              <p class="mt-1 text-sm text-ink-500">{c.tagline}</p>
-            </div>
-          </a>
-        ))
-      }
-    </div>
-  </section>
-
-  <!-- Why TheMarketStack -->
-  <section class="border-y border-ink-100 bg-white">
-    <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-      <div class="max-w-2xl">
-        <h2 class="text-3xl font-semibold text-ink-900">Why TheMarketStack</h2>
-        <p class="mt-2 text-ink-500">
-          How we keep this directory genuinely useful.
-        </p>
-      </div>
-      <div class="mt-12 grid gap-x-12 gap-y-10 sm:grid-cols-2">
-        {
-          valueProps.map((v) => (
-            <div class="flex gap-4">
-              <span
-                class="mt-0.5 flex-shrink-0 text-ink-900"
-                aria-hidden="true"
-              >
-                <Icon name={`lucide:${v.icon}`} class="h-6 w-6" />
-              </span>
-              <div>
-                <h3 class="font-semibold text-ink-900">{v.title}</h3>
-                <p class="mt-1.5 text-sm text-ink-500">{v.body}</p>
-              </div>
-            </div>
-          ))
-        }
-      </div>
-    </div>
-  </section>
-
   <!-- Top rated tools -->
-  <section class="border-y border-ink-100 bg-white">
-    <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+  <section class="relative overflow-hidden border-y border-ink-100 bg-white">
+    <Speckles />
+    <div class="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
       <div class="flex items-end justify-between">
         <div>
-          <h2 class="text-3xl font-semibold text-ink-900">Top-rated tools</h2>
+          <h2 class="text-3xl font-semibold text-ink-900">
+            Top-rated tools
+          </h2>
           <p class="mt-2 text-ink-500">
             The highest-scoring platforms across all categories.
           </p>
@@ -302,6 +217,100 @@ const stickers = [
       </div>
     </div>
   </section>
+
+  <!-- Categories -->
+  <section class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+    <div class="flex items-end justify-between">
+      <div>
+        <h2 class="text-3xl font-semibold text-ink-900">
+          Browse by category
+        </h2>
+        <p class="mt-2 text-ink-500">
+          Every major slice of the modern marketing stack.
+        </p>
+      </div>
+      <a
+        href="/categories"
+        class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
+        >All categories &rarr;</a
+      >
+    </div>
+    <div class="mt-10 flex flex-wrap gap-3">
+      {
+        categories.map((c) => (
+          <a
+            href={`/categories/${c.slug}`}
+            class="group inline-flex items-center gap-2.5 rounded-full border border-ink-200 bg-white py-2 pl-2.5 pr-4 transition hover:border-orange-300 hover:bg-orange-50"
+          >
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink-100 text-ink-700 transition group-hover:bg-orange-600 group-hover:text-white">
+              <Icon name={`lucide:${c.icon}`} class="h-4 w-4" />
+            </span>
+            <span class="text-sm font-medium text-ink-900 group-hover:text-orange-700">
+              {c.name}
+            </span>
+            <span class="text-xs font-medium text-ink-400">
+              {toolsInCategory(c.slug).length}
+            </span>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Latest guides (articles) -->
+  {
+    latestArticles.length > 0 && (
+      <section class="relative overflow-hidden border-y border-ink-100 bg-white">
+        <Speckles />
+        <div class="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
+          <div class="flex items-end justify-between">
+            <div>
+              <h2 class="text-3xl font-semibold text-ink-900">
+                Latest articles
+              </h2>
+              <p class="mt-2 text-ink-500">
+                Buying advice and comparisons from our editors.
+              </p>
+            </div>
+            <a
+              href="/resources"
+              class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
+            >
+              All resources &rarr;
+            </a>
+          </div>
+          <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {latestArticles.map((a) => (
+              <a
+                href={`/resources/${a.id}`}
+                class="group flex flex-col rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
+              >
+                <div class="flex items-center justify-between">
+                  <span
+                    class={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${tagColor(a.data.tag)}`}
+                  >
+                    {a.data.tag}
+                  </span>
+                  <span class="text-xs text-ink-400">
+                    {fmtDate(a.data.date)}
+                  </span>
+                </div>
+                <h3 class="mt-4 text-lg font-semibold text-ink-900 group-hover:text-brand-700">
+                  {a.data.title}
+                </h3>
+                <p class="mt-2 flex-1 text-sm text-ink-500">
+                  {a.data.description}
+                </p>
+                <span class="mt-4 text-sm font-medium text-brand-600">
+                  Read more &rarr;
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   <!-- Featured comparisons -->
   <section class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
@@ -348,56 +357,6 @@ const stickers = [
     </div>
   </section>
 
-  <!-- Latest guides -->
-  {
-    latestArticles.length > 0 && (
-      <section class="border-t border-ink-100 bg-white">
-        <div class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-          <div class="flex items-end justify-between">
-            <div>
-              <h2 class="text-3xl font-semibold text-ink-900">Latest guides</h2>
-              <p class="mt-2 text-ink-500">
-                Buying advice and comparisons from our editors.
-              </p>
-            </div>
-            <a
-              href="/resources"
-              class="hidden text-sm font-medium text-brand-600 hover:text-brand-700 sm:block"
-            >
-              All resources &rarr;
-            </a>
-          </div>
-          <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {latestArticles.map((a) => (
-              <a
-                href={`/resources/${a.id}`}
-                class="group flex flex-col rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="w-fit rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-                    {a.data.tag}
-                  </span>
-                  <span class="text-xs text-ink-400">
-                    {fmtDate(a.data.date)}
-                  </span>
-                </div>
-                <h3 class="mt-4 text-lg font-semibold text-ink-900 group-hover:text-brand-700">
-                  {a.data.title}
-                </h3>
-                <p class="mt-2 flex-1 text-sm text-ink-500">
-                  {a.data.description}
-                </p>
-                <span class="mt-4 text-sm font-medium text-brand-600">
-                  Read more &rarr;
-                </span>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
-    )
-  }
-
   <!-- Newsletter -->
   <Newsletter />
 
@@ -415,7 +374,7 @@ const stickers = [
       </div>
       <a
         href="/submit"
-        class="inline-block flex-shrink-0 rounded-xl bg-white px-6 py-3 font-semibold text-brand-700 transition hover:bg-brand-50"
+        class="inline-block flex-shrink-0 rounded-xl bg-white px-6 py-3 font-semibold text-brand-700 transition hover:bg-ink-50"
       >
         Add your tool &rarr;
       </a>

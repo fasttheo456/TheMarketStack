@@ -1,6 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import Newsletter from "../../components/Newsletter.astro";
+import { tagColor } from "../../data/articleTags";
 import { categories } from "../../data/categories";
 import { getCollection } from "astro:content";
 
@@ -50,7 +51,9 @@ const fmtDate = (d: Date) =>
               class="group flex flex-col rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
             >
               <div class="flex items-center justify-between">
-                <span class="w-fit rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+                <span
+                  class={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${tagColor(a.data.tag)}`}
+                >
                   {a.data.tag}
                 </span>
                 <span class="text-xs text-ink-400">{fmtDate(a.data.date)}</span>
