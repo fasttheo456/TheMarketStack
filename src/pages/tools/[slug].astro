@@ -6,7 +6,7 @@ import ToolCard from "../../components/ToolCard.astro";
 import {
   tools,
   toolBySlug,
-  featureCatalog,
+  featuresForCategory,
   categoryName,
   formatStartingPrice,
   budgetLabel,
@@ -35,6 +35,8 @@ const versus = tools
     (t) => t.slug !== tool.slug && t.primaryCategory === tool.primaryCategory,
   )
   .slice(0, 3);
+
+const features = featuresForCategory(tool.primaryCategory);
 ---
 
 <Base
@@ -61,7 +63,7 @@ const versus = tools
       class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between"
     >
       <div class="flex items-start gap-4">
-        <ToolBadge badge={tool.badge} color={tool.badgeColor} size="lg" />
+        <ToolBadge badge={tool.badge} website={tool.website} name={tool.name} size="lg" />
         <div>
           <h1 class="text-3xl font-bold tracking-tight text-ink-900">
             {tool.name}
@@ -199,7 +201,7 @@ const versus = tools
         </h2>
         <dl class="mt-4 grid gap-2 sm:grid-cols-2">
           {
-            featureCatalog.map((f) => {
+            features.map((f) => {
               const has = tool.features[f.key];
               return (
                 <div class="flex items-center gap-3 rounded-xl border border-ink-100 px-4 py-3">

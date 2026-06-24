@@ -1,15 +1,11 @@
 ---
 import Base from "../layouts/Base.astro";
+import { Icon } from "astro-icon/components";
 import ToolCard from "../components/ToolCard.astro";
 import ToolBadge from "../components/ToolBadge.astro";
 import Newsletter from "../components/Newsletter.astro";
 import { categories } from "../data/categories";
-import {
-  tools,
-  toolBySlug,
-  toolsInCategory,
-  featureCatalog,
-} from "../data/tools";
+import { tools, toolBySlug, toolsInCategory } from "../data/tools";
 import { featuredComparisons } from "../data/comparisons";
 import { getCollection } from "astro:content";
 
@@ -30,37 +26,70 @@ const fmtDate = (d: Date) =>
     year: "numeric",
   });
 
-const stats = [
-  { value: `${tools.length}`, label: "Tools reviewed" },
-  { value: `${categories.length}`, label: "Categories" },
-  { value: `${featureCatalog.length}`, label: "Features compared" },
-  {
-    value: `${latestArticles.length > 0 ? latestArticles.length : 0}+`,
-    label: "Expert guides",
-  },
-];
-
 const valueProps = [
   {
-    title: "Independent comparisons",
-    body: "No pay-to-win rankings. Every tool is scored on the same criteria so you can trust what you read.",
-    icon: "M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
-  },
-  {
     title: "Side-by-side features",
-    body: "See exactly how two tools stack up, feature for feature, price for price, in one clean table.",
-    icon: "M4 5h7v14H4zM13 5h7v14h-7z",
+    body: "See how two tools compare feature by feature and price by price, in one table.",
+    icon: "table-2",
   },
   {
     title: "Pricing in plain English",
-    body: "Starting prices, free tiers, and the gotchas that inflate the bill, decoded, not buried.",
-    icon: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+    body: "Starting prices, free tiers, and the add-ons that quietly raise the bill, all spelled out.",
+    icon: "tag",
   },
   {
     title: "Guides from practitioners",
-    body: "Buying guides and explainers written for marketers, so you shortlist faster and choose with confidence.",
-    icon: "M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM14 3v6h6",
+    body: "Buying guides and explainers written for marketers, so you can shortlist faster.",
+    icon: "book-open",
   },
+];
+
+// Decorative hero backdrop: brand-logo stickers kept in the top & bottom bands
+// (above and below the headline) so they never sit on the text.
+// Only brands that are actually in our directory, spread across the whole hero
+// (top band, side margins, bottom band) so none sit on the headline text.
+const heroLogoSpec = [
+  { slug: "hubspot", pos: "left-[10%] top-[11%]", rot: "-rotate-[8deg]" },
+  { slug: "mailchimp", pos: "left-[42%] top-[7%]", rot: "rotate-[6deg]" },
+  { slug: "ahrefs", pos: "left-[78%] top-[11%]", rot: "rotate-[7deg]" },
+  { slug: "hootsuite", pos: "left-[5%] top-[46%]", rot: "rotate-[6deg]" },
+  { slug: "mixpanel", pos: "left-[92%] top-[44%]", rot: "-rotate-[6deg]" },
+  { slug: "activecampaign", pos: "left-[16%] top-[78%]", rot: "-rotate-[6deg]" },
+  { slug: "klaviyo", pos: "left-[52%] top-[80%]", rot: "rotate-[7deg]" },
+  { slug: "semrush", pos: "left-[86%] top-[76%]", rot: "-rotate-[7deg]" },
+];
+const decorLogos = heroLogoSpec.map((s) => {
+  const t = toolBySlug(s.slug)!;
+  let domain = "";
+  try {
+    domain = new URL(t.website).hostname.replace(/^www\./, "");
+  } catch {}
+  return { domain, name: t.name, pos: s.pos, rot: s.rot };
+});
+
+// Small "speckles" sprinkled across the whole hero (tiny, so text stays readable)
+const freckles = [
+  "left-[7%] top-[24%] h-2 w-2 bg-ink-200",
+  "left-[28%] top-[16%] h-1.5 w-1.5 bg-orange-400/70",
+  "left-[52%] top-[20%] h-1 w-1 bg-ink-300",
+  "left-[73%] top-[15%] h-2 w-2 bg-ink-200",
+  "left-[93%] top-[28%] h-1.5 w-1.5 bg-ink-300",
+  "left-[10%] top-[48%] h-1 w-1 bg-ink-300",
+  "left-[90%] top-[46%] h-1.5 w-1.5 bg-orange-400/60",
+  "left-[5%] top-[64%] h-2 w-2 bg-ink-200",
+  "left-[31%] top-[62%] h-1 w-1 bg-ink-300",
+  "left-[55%] top-[64%] h-1.5 w-1.5 bg-ink-200",
+  "left-[78%] top-[60%] h-1 w-1 bg-orange-400/70",
+  "left-[20%] top-[86%] h-1.5 w-1.5 bg-ink-300",
+  "left-[68%] top-[88%] h-1 w-1 bg-ink-300",
+  "left-[48%] top-[90%] h-2 w-2 bg-ink-200",
+];
+
+// A couple of playful sticker accents
+const stickers = [
+  { icon: "sparkles", pos: "left-[34%] top-[16%]", cls: "h-5 w-5 -rotate-6 text-orange-400" },
+  { icon: "star", pos: "left-[80%] top-[67%]", cls: "h-4 w-4 rotate-12 text-orange-400" },
+  { icon: "plus", pos: "left-[8%] top-[52%]", cls: "h-4 w-4 text-ink-300" },
 ];
 ---
 
@@ -72,31 +101,59 @@ const valueProps = [
   <section class="relative overflow-hidden border-b border-ink-100">
     <div class="absolute inset-0 bg-dotted opacity-60"></div>
     <div
-      class="absolute inset-0 bg-gradient-to-b from-ink-50/0 via-ink-50/50 to-ink-50"
+      class="absolute inset-0 bg-gradient-to-b from-ink-50/0 via-ink-50/40 to-ink-50"
     >
     </div>
+
+    <!-- Decorative backdrop: brand stickers, speckles & accents (behind the text) -->
     <div
-      class="relative mx-auto max-w-6xl px-4 py-28 text-center sm:px-6 sm:py-36"
+      class="pointer-events-none absolute inset-0 hidden sm:block"
+      aria-hidden="true"
     >
-      <span
-        class="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700"
-      >
-        <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>
-        {tools.length} tools across {categories.length} categories
-      </span>
+      {
+        freckles.map((f) => <span class={`absolute rounded-full ${f}`} />)
+      }
+      {
+        stickers.map((s) => (
+          <span class={`absolute ${s.pos}`}>
+            <Icon name={`lucide:${s.icon}`} class={s.cls} />
+          </span>
+        ))
+      }
+      {
+        decorLogos.map((l, i) => (
+          <span
+            class={`absolute ${l.pos} animate-floaty`}
+            style={`animation-delay:${i * 0.5}s`}
+          >
+            <span
+              class={`flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm ${l.rot}`}
+            >
+              <img
+                src={`https://icons.duckduckgo.com/ip3/${l.domain}.ico`}
+                alt=""
+                width="48"
+                height="48"
+                loading="lazy"
+                class="h-5 w-5 object-contain"
+              />
+            </span>
+          </span>
+        ))
+      }
+    </div>
+
+    <div
+      class="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 sm:py-28"
+    >
       <h1
-        class="mx-auto mt-8 max-w-3xl text-5xl font-semibold leading-[1.05] text-ink-900 sm:text-7xl"
+        class="mx-auto max-w-3xl text-4xl font-semibold leading-[1.08] text-ink-900 sm:text-6xl"
       >
-        The directory for
-        <span
-          class="bg-gradient-to-r from-ink-900 to-ink-500 bg-clip-text text-transparent"
-        >
-          marketing software</span
-        >
+        The directory for <span class="text-orange-600">marketing</span> software
       </h1>
-      <p class="mx-auto mt-8 max-w-xl text-lg text-ink-500">
-        Search, compare, and choose the right marketing SaaS, independent
-        side-by-side comparisons of features, pricing, and ratings.
+      <p class="mx-auto mt-6 max-w-xl text-lg text-ink-500">
+        Search, compare, and choose the right marketing SaaS, with side-by-side
+        comparisons of features, pricing, and ratings across {tools.length} tools.
       </p>
 
       <!-- Search block -->
@@ -152,22 +209,6 @@ const valueProps = [
     </div>
   </section>
 
-  <!-- Stats strip -->
-  <section class="border-b border-ink-100 bg-white">
-    <div
-      class="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-ink-100 px-4 sm:grid-cols-4 sm:px-6"
-    >
-      {
-        stats.map((s) => (
-          <div class="px-4 py-8 text-center">
-            <p class="text-3xl font-semibold text-ink-900">{s.value}</p>
-            <p class="mt-1 text-sm text-ink-400">{s.label}</p>
-          </div>
-        ))
-      }
-    </div>
-  </section>
-
   <!-- Categories -->
   <section class="mx-auto max-w-6xl px-4 py-24 sm:px-6">
     <div class="flex items-end justify-between">
@@ -191,17 +232,7 @@ const valueProps = [
             class="group flex items-start gap-4 rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
           >
             <span class="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
-              <svg
-                class="h-6 w-6"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d={c.icon} />
-              </svg>
+              <Icon name={`lucide:${c.icon}`} class="h-5 w-5" />
             </span>
             <div>
               <div class="flex items-center gap-2">
@@ -226,29 +257,23 @@ const valueProps = [
       <div class="max-w-2xl">
         <h2 class="text-3xl font-semibold text-ink-900">Why TheMarketStack</h2>
         <p class="mt-2 text-ink-500">
-          A directory built to help you decide, not to sell you the highest
-          bidder.
+          How we keep this directory genuinely useful.
         </p>
       </div>
-      <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="mt-12 grid gap-x-12 gap-y-10 sm:grid-cols-2">
         {
           valueProps.map((v) => (
-            <div class="rounded-2xl border border-ink-100 bg-white p-6">
-              <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-ink-900 text-white">
-                <svg
-                  class="h-6 w-6"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d={v.icon} />
-                </svg>
+            <div class="flex gap-4">
+              <span
+                class="mt-0.5 flex-shrink-0 text-ink-900"
+                aria-hidden="true"
+              >
+                <Icon name={`lucide:${v.icon}`} class="h-6 w-6" />
               </span>
-              <h3 class="mt-4 font-semibold text-ink-900">{v.title}</h3>
-              <p class="mt-2 text-sm text-ink-500">{v.body}</p>
+              <div>
+                <h3 class="font-semibold text-ink-900">{v.title}</h3>
+                <p class="mt-1.5 text-sm text-ink-500">{v.body}</p>
+              </div>
             </div>
           ))
         }
@@ -304,9 +329,9 @@ const valueProps = [
               class="group flex items-center justify-between rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
             >
               <div class="flex items-center gap-3">
-                <ToolBadge badge={ta.badge} color={ta.badgeColor} size="sm" />
+                <ToolBadge badge={ta.badge} website={ta.website} name={ta.name} size="sm" />
                 <span class="text-xs font-bold text-ink-300">VS</span>
-                <ToolBadge badge={tb.badge} color={tb.badgeColor} size="sm" />
+                <ToolBadge badge={tb.badge} website={tb.website} name={tb.name} size="sm" />
               </div>
               <div class="text-right">
                 <p class="text-sm font-semibold text-ink-900">
@@ -379,7 +404,7 @@ const valueProps = [
   <!-- Submit a tool CTA -->
   <section class="mx-auto max-w-6xl px-4 pb-28 sm:px-6">
     <div
-      class="flex flex-col items-start justify-between gap-6 rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 p-10 text-white sm:flex-row sm:items-center"
+      class="flex flex-col items-start justify-between gap-6 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-10 text-white sm:flex-row sm:items-center"
     >
       <div>
         <h3 class="text-2xl font-bold">Building a marketing tool?</h3>

@@ -1,5 +1,6 @@
 ---
 import Base from "../../layouts/Base.astro";
+import { Icon } from "astro-icon/components";
 import { categories } from "../../data/categories";
 import { toolsInCategory } from "../../data/tools";
 ---
@@ -31,17 +32,7 @@ import { toolsInCategory } from "../../data/tools";
             >
               <div class="flex items-center gap-4">
                 <span class="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
-                  <svg
-                    class="h-6 w-6"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d={c.icon} />
-                  </svg>
+                  <Icon name={`lucide:${c.icon}`} class="h-6 w-6" />
                 </span>
                 <div>
                   <h2 class="font-semibold text-ink-900 group-hover:text-brand-700">

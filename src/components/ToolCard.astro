@@ -15,7 +15,7 @@ const { tool } = Astro.props;
   class="group flex flex-col rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
 >
   <div class="flex items-start gap-3">
-    <ToolBadge badge={tool.badge} color={tool.badgeColor} />
+    <ToolBadge badge={tool.badge} website={tool.website} name={tool.name} />
     <div class="flex min-h-12 min-w-0 flex-1 items-center">
       <h3
         class="truncate font-semibold text-ink-900 group-hover:text-brand-700"
