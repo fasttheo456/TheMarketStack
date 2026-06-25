@@ -1,6 +1,10 @@
 ---
 import Base from "../../layouts/Base.astro";
+import { Icon } from "astro-icon/components";
+import ToolBadge from "../../components/ToolBadge.astro";
+import Newsletter from "../../components/Newsletter.astro";
 import { tagColor } from "../../data/articleTags";
+import { toolBySlug } from "../../data/tools";
 import { getCollection, render } from "astro:content";
 
 export async function getStaticPaths() {
@@ -12,7 +16,28 @@ export async function getStaticPaths() {
 }
 
 const { article } = Astro.props;
-const { Content } = await render(article);
+const { Content, headings } = await render(article);
+
+const toc = headings.filter((h) => h.depth === 2);
+const mentioned = (article.data.tools ?? [])
+  .map((slug) => toolBySlug(slug))
+  .filter((t) => t != null);
+const related = (await getCollection("articles", ({ data }) => !data.draft))
+  .filter((a) => a.id !== article.id)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+
+const shareUrl = new URL(
+  `/resources/${article.id}`,
+  Astro.site ?? Astro.url.origin,
+).href;
+const shareText = encodeURIComponent(article.data.title);
+const u = encodeURIComponent(shareUrl);
+const shares = [
+  { icon: "simple-icons:x", label: "Share on X", href: `https://twitter.com/intent/tweet?text=${shareText}&url=${u}` },
+  { icon: "simple-icons:linkedin", label: "Share on LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${u}` },
+  { icon: "simple-icons:reddit", label: "Share on Reddit", href: `https://www.reddit.com/submit?url=${u}&title=${shareText}` },
+];
 
 const fmtDate = (d: Date) =>
   d.toLocaleDateString("en-US", {
@@ -23,42 +48,217 @@ const fmtDate = (d: Date) =>
 ---
 
 <Base title={article.data.title} description={article.data.description}>
-  <article class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-    <nav class="flex items-center gap-1.5 text-sm text-ink-400">
-      <a href="/resources" class="hover:text-brand-600">Resources</a>
-      <span>/</span>
-      <span class="text-ink-600">{article.data.tag}</span>
-    </nav>
+  <!-- Title block -->
+  <section class="border-b border-ink-100 bg-white">
+    <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      <nav class="flex items-center gap-1.5 text-sm text-ink-400">
+        <a href="/resources" class="hover:text-brand-600">Resources</a>
+        <span>/</span>
+        <span class="text-ink-600">{article.data.tag}</span>
+      </nav>
 
-    <header class="mt-6">
       <span
-        class={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${tagColor(article.data.tag)}`}
-        >{article.data.tag}</span
+        class={`mt-6 inline-block w-fit rounded-full px-3 py-1 text-xs font-semibold ${tagColor(article.data.tag)}`}
       >
+        {article.data.tag}
+      </span>
       <h1
         class="mt-4 text-4xl font-semibold leading-tight text-ink-900 sm:text-5xl"
       >
         {article.data.title}
       </h1>
       <p class="mt-4 text-lg text-ink-500">{article.data.description}</p>
-      <p class="mt-5 text-sm text-ink-400">
-        {article.data.author && <span>By {article.data.author} · </span>}
-        {fmtDate(article.data.date)}
-      </p>
-    </header>
 
-    <div
-      class="prose prose-ink mt-10 max-w-none prose-headings:font-display prose-headings:font-semibold prose-a:text-brand-700 prose-a:font-medium"
-    >
-      <Content />
-    </div>
-
-    <div class="mt-12 border-t border-ink-100 pt-8">
-      <a
-        href="/resources"
-        class="text-sm font-medium text-brand-600 hover:text-brand-700"
-        >&larr; Back to all resources</a
+      <div
+        class="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-ink-100 pt-5"
       >
+        <p class="text-sm text-ink-400">
+          {article.data.author && <span>By {article.data.author} · </span>}
+          {fmtDate(article.data.date)}
+        </p>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium text-ink-400">Share</span>
+          {
+            shares.map((s) => (
+              <a
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink-200 text-ink-500 transition hover:border-ink-300 hover:text-ink-900"
+              >
+                <Icon name={s.icon} class="h-4 w-4" />
+              </a>
+            ))
+          }
+          <button
+            id="copyLink"
+            data-url={shareUrl}
+            aria-label="Copy link"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink-200 text-ink-500 transition hover:border-ink-300 hover:text-ink-900"
+          >
+            <Icon name="lucide:link" class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
     </div>
-  </article>
+  </section>
+
+  <!-- Body + sticky TOC -->
+  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div class="md:grid md:grid-cols-[1fr_14rem] md:gap-10 lg:gap-12">
+      <article class="min-w-0">
+        {
+          article.data.keyTakeaways && article.data.keyTakeaways.length > 0 && (
+            <div class="rounded-2xl border border-ink-100 bg-ink-50/70 p-6 sm:p-8">
+              <h2 class="text-xs font-semibold uppercase tracking-wide text-ink-500">
+                Key takeaways
+              </h2>
+              <ul class="mt-4 space-y-3">
+                {article.data.keyTakeaways.map((t) => (
+                  <li class="flex gap-3 text-sm leading-relaxed text-ink-700">
+                    <svg
+                      class="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-500"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                    >
+                      <path
+                        d="M20 6 9 17l-5-5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+
+        <div
+          class="prose prose-ink mt-10 max-w-none prose-headings:scroll-mt-24 prose-headings:font-display prose-headings:font-semibold prose-a:font-medium prose-a:text-brand-700"
+        >
+          <Content />
+        </div>
+
+      </article>
+
+      <!-- Right rail: on-this-page, mentioned tools, CTA -->
+      {
+        (toc.length > 1 || mentioned.length > 0) && (
+          <aside class="mt-12 hidden md:mt-0 md:block">
+            <div class="sticky top-24 space-y-8">
+              {toc.length > 1 && (
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-ink-400">
+                    On this page
+                  </p>
+                  <ul class="mt-4 space-y-2.5 border-l border-ink-100">
+                    {toc.map((h) => (
+                      <li>
+                        <a
+                          href={`#${h.slug}`}
+                          class="-ml-px block border-l-2 border-transparent pl-4 text-sm text-ink-500 transition hover:border-orange-400 hover:text-ink-900"
+                        >
+                          {h.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {mentioned.length > 0 && (
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-ink-400">
+                    Tools mentioned
+                  </p>
+                  <ul class="mt-4 space-y-2">
+                    {mentioned.map((t) => (
+                      <li>
+                        <a
+                          href={`/tools/${t.slug}`}
+                          class="group flex items-center gap-2.5 rounded-xl border border-ink-100 bg-white p-2 transition hover:border-orange-300 hover:shadow-sm"
+                        >
+                          <ToolBadge badge={t.badge} website={t.website} name={t.name} size="sm" />
+                          <span class="min-w-0 flex-1 truncate text-sm font-medium text-ink-900 group-hover:text-orange-600">
+                            {t.name}
+                          </span>
+                          <span class="text-ink-300 transition group-hover:text-orange-600" aria-hidden="true">
+                            &rarr;
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div class="rounded-2xl border border-ink-100 bg-ink-50/70 p-5">
+                <p class="text-sm font-semibold text-ink-900">Building a marketing tool?</p>
+                <p class="mt-1 text-xs text-ink-500">
+                  Submit your product for a free review in the directory.
+                </p>
+                <a
+                  href="/submit"
+                  class="mt-3 inline-block rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
+                >
+                  Add your tool &rarr;
+                </a>
+              </div>
+            </div>
+          </aside>
+        )
+      }
+    </div>
+  </div>
+
+  <!-- Related guides -->
+  {
+    related.length > 0 && (
+      <section class="border-t border-ink-100 bg-white">
+        <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <h2 class="text-3xl font-semibold text-ink-900">Related guides</h2>
+          <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((a) => (
+              <a
+                href={`/resources/${a.id}`}
+                class="group flex flex-col rounded-2xl border border-ink-100 bg-white p-6 transition hover:border-orange-300 hover:shadow-lg hover:shadow-orange-500/10"
+              >
+                <span
+                  class={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${tagColor(a.data.tag)}`}
+                >
+                  {a.data.tag}
+                </span>
+                <h3 class="mt-4 text-lg font-semibold text-ink-900 group-hover:text-orange-600">
+                  {a.data.title}
+                </h3>
+                <p class="mt-2 flex-1 text-sm text-ink-500">{a.data.description}</p>
+                <span class="mt-4 text-sm font-medium text-brand-600">Read more &rarr;</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <Newsletter />
 </Base>
+
+<script>
+  const btn = document.getElementById("copyLink");
+  btn?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(btn.dataset.url || window.location.href);
+      btn.classList.add("border-emerald-400", "text-emerald-600");
+      setTimeout(
+        () => btn.classList.remove("border-emerald-400", "text-emerald-600"),
+        1200,
+      );
+    } catch {}
+  });
+</script>

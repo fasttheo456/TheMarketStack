@@ -13,6 +13,8 @@ const articles = defineCollection({
     tag: z.string().default("Guide"),
     author: z.string().optional(),
     draft: z.boolean().default(false),
+    keyTakeaways: z.array(z.string()).optional(),
+    tools: z.array(z.string()).optional(),
   }),
 });
 

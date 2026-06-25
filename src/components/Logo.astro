@@ -1,0 +1,73 @@
+---
+interface Props {
+  class?: string;
+  /** unique suffix so gradient/filter/clip ids don't clash across instances */
+  uid?: string;
+}
+const { class: className = "h-8 w-8", uid = "lg" } = Astro.props;
+---
+
+<svg
+  class={className}
+  viewBox="0 0 32 32"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  role="img"
+  aria-label="TheMarketStack"
+>
+  <defs>
+    <linearGradient id={`bg-${uid}`} x1="4" y1="0" x2="28" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" />
+      <stop offset="1" stop-color="#ECEEF1" />
+    </linearGradient>
+    <linearGradient id={`blade-${uid}`} x1="16" y1="4" x2="16" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4F5F8" />
+      <stop offset="1" stop-color="#A6ACB7" />
+    </linearGradient>
+    <linearGradient id={`handle-${uid}`} x1="16" y1="16" x2="16" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FB923C" />
+      <stop offset="1" stop-color="#EA580C" />
+    </linearGradient>
+    <!-- brushed-metal grain -->
+    <filter id={`grain-${uid}`} x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="n" />
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0" />
+    </filter>
+    <clipPath id={`blades-${uid}`}>
+      <path d="M17.36 15.31 L5.5 4.5 L14.64 17.69 Z" />
+      <path d="M14.64 15.31 L26.5 4.5 L17.36 17.69 Z" />
+    </clipPath>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill={`url(#bg-${uid})`} stroke="#E3E5E9" />
+
+  <!-- handles + finger rings -->
+  <g
+    stroke={`url(#handle-${uid})`}
+    stroke-width="2.6"
+    stroke-linecap="round"
+    fill="none"
+  >
+    <path d="M16 16.5 L22.5 25.5" />
+    <path d="M16 16.5 L9.5 25.5" />
+    <circle cx="23" cy="26.4" r="2.9" />
+    <circle cx="9" cy="26.4" r="2.9" />
+  </g>
+
+  <!-- steel blades (open V) -->
+  <path d="M17.36 15.31 L5.5 4.5 L14.64 17.69 Z" fill={`url(#blade-${uid})`} />
+  <path d="M14.64 15.31 L26.5 4.5 L17.36 17.69 Z" fill={`url(#blade-${uid})`} />
+
+  <!-- texture overlay on the blades -->
+  <rect x="0" y="0" width="32" height="32" fill="#20242E" opacity="0.22" filter={`url(#grain-${uid})`} clip-path={`url(#blades-${uid})`} />
+
+  <!-- blade sheen -->
+  <g stroke="#ffffff" stroke-opacity="0.55" stroke-width="0.9" stroke-linecap="round">
+    <path d="M7.4 6.0 L16.4 14.4" />
+    <path d="M24.6 6.0 L15.6 14.4" />
+  </g>
+
+  <!-- pivot screw -->
+  <circle cx="16" cy="16.4" r="2.2" fill={`url(#blade-${uid})`} stroke="#8A909B" stroke-width="0.6" />
+  <circle cx="15.4" cy="15.8" r="0.7" fill="#ffffff" opacity="0.7" />
+</svg>
