@@ -1,8 +1,10 @@
 ---
 import Base from "../../layouts/Base.astro";
-import Rating from "../../components/Rating.astro";
+import { Icon } from "astro-icon/components";
 import ToolBadge from "../../components/ToolBadge.astro";
 import ToolCard from "../../components/ToolCard.astro";
+import Newsletter from "../../components/Newsletter.astro";
+import { tagColor } from "../../data/articleTags";
 import {
   tools,
   toolBySlug,
@@ -12,6 +14,8 @@ import {
   budgetLabel,
   complexityLabel,
 } from "../../data/tools";
+import { getToolContent } from "../../data/toolContent";
+import { getCollection } from "astro:content";
 
 export function getStaticPaths() {
   return tools.map((t) => ({ params: { slug: t.slug } }));
@@ -19,328 +23,700 @@ export function getStaticPaths() {
 
 const { slug } = Astro.params;
 const tool = toolBySlug(slug!)!;
+const content = getToolContent(tool.slug);
+const overviewParagraphs = content?.overview ?? [tool.description];
+const year = new Date().getFullYear();
 
-const related = tools
+const sameCategory = tools
   .filter(
     (t) =>
       t.slug !== tool.slug &&
       t.categories.some((c) => tool.categories.includes(c)),
   )
-  .sort((a, b) => b.rating - a.rating)
-  .slice(0, 3);
+  .sort((a, b) => b.rating - a.rating);
 
-// Suggest a couple of head-to-head comparisons within the same primary category
-const versus = tools
-  .filter(
-    (t) => t.slug !== tool.slug && t.primaryCategory === tool.primaryCategory,
-  )
-  .slice(0, 3);
-
+const compareWith = sameCategory.slice(0, 6);
+const similar = sameCategory.slice(0, 3);
 const features = featuresForCategory(tool.primaryCategory);
+const featureCount = features.filter((f) => tool.features[f.key]).length;
+
+// Guides that mention this tool (from article frontmatter `tools`)
+const guides = (await getCollection("articles", ({ data }) => !data.draft))
+  .filter((a) => (a.data.tools ?? []).includes(tool.slug))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+
+// "Who it's for" derived from existing metadata
+const teamWords: Record<string, string> = {
+  solo: "solo operators",
+  startup: "small teams",
+  midmarket: "mid-market teams",
+  enterprise: "enterprises",
+};
+const fitText = tool.teamFit.map((t) => teamWords[t]).join(", ");
+const idealFor = [
+  `Best suited to ${fitText}.`,
+  `${budgetLabel[tool.budgetTier]} pricing, ${formatStartingPrice(tool).toLowerCase()} to start.`,
+  `${complexityLabel[tool.complexity]} to set up and run day to day.`,
+];
+const notFor =
+  tool.complexity === "advanced"
+    ? "You want something you can set up in minutes with no learning curve."
+    : tool.budgetTier === "premium"
+      ? "You're on a tight budget or only need the basics."
+      : tool.cons[0];
+
+const price = formatStartingPrice(tool).toLowerCase();
+const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
+// Key takeaways (derived), shown at the top of the page
+const takeaways = [
+  `${tool.name} is a ${budgetLabel[tool.budgetTier].toLowerCase()} ${categoryName(tool.primaryCategory).toLowerCase()} tool.`,
+  `Best suited to ${fitText}.`,
+  tool.startingPriceMonthly < 0
+    ? "Custom, quote-based pricing with no public free plan."
+    : tool.features.freePlan
+      ? "A free plan is available, with paid tiers as you scale."
+      : `No free plan; paid plans start at ${price}.`,
+  `Biggest strength: ${lower(tool.pros[0])}.`,
+  `Main watch-out: ${lower(tool.cons[0])}.`,
+];
+
+// FAQ (derived), shown at the end of the page
+const altNames = sameCategory.slice(0, 3).map((t) => t.name);
+const faqs = [
+  { q: `What is ${tool.name}?`, a: overviewParagraphs[0] },
+  {
+    q: `How much does ${tool.name} cost?`,
+    a:
+      (tool.startingPriceMonthly < 0
+        ? `${tool.name} uses custom, quote-based pricing. `
+        : tool.features.freePlan
+          ? `${tool.name} offers a free plan, with paid tiers beyond it. `
+          : `${tool.name} starts at ${price}. `) +
+      tool.pricingNote +
+      ".",
+  },
+  {
+    q: `Does ${tool.name} have a free plan?`,
+    a: tool.features.freePlan
+      ? `Yes, ${tool.name} has a free plan you can start on before upgrading.`
+      : tool.startingPriceMonthly < 0
+        ? `No, ${tool.name} doesn't offer a free plan; pricing is quote-based.`
+        : `No, ${tool.name} doesn't offer a free plan, but paid plans start at ${price}.`,
+  },
+  { q: `What is ${tool.name} best for?`, a: tool.bestFor },
+  altNames.length > 0
+    ? {
+        q: `What are the best ${tool.name} alternatives?`,
+        a: `Strong alternatives include ${altNames.join(", ")}.`,
+        href: `/alternatives/${tool.slug}`,
+      }
+    : null,
+  {
+    q: `Is ${tool.name} worth it?`,
+    a: content?.verdict ?? tool.bestFor,
+  },
+].filter((f) => f != null);
+
+const reviewsUrl = `https://www.g2.com/search?query=${encodeURIComponent(tool.name)}`;
+const review = content?.review;
+
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+const facts = [
+  { icon: "tag", label: "Starting price", value: formatStartingPrice(tool) },
+  {
+    icon: "gift",
+    label: "Free plan",
+    value: tool.features.freePlan ? "Yes" : "No",
+  },
+  { icon: "wallet", label: "Budget tier", value: budgetLabel[tool.budgetTier] },
+  {
+    icon: "gauge",
+    label: "Complexity",
+    value: complexityLabel[tool.complexity],
+  },
+  { icon: "calendar", label: "Founded", value: String(tool.founded) },
+  { icon: "map-pin", label: "HQ", value: tool.hq },
+  { icon: "plug", label: "Integrations", value: `${tool.integrationsCount}+` },
+];
+
+const shareUrl = new URL(`/tools/${tool.slug}`, Astro.site ?? Astro.url.origin)
+  .href;
+const u = encodeURIComponent(shareUrl);
+const st = encodeURIComponent(`${tool.name} review`);
+const shares = [
+  {
+    icon: "simple-icons:x",
+    label: "Share on X",
+    href: `https://twitter.com/intent/tweet?text=${st}&url=${u}`,
+  },
+  {
+    icon: "simple-icons:linkedin",
+    label: "Share on LinkedIn",
+    href: `https://www.linkedin.com/sharing/share-offsite/?url=${u}`,
+  },
+  {
+    icon: "simple-icons:reddit",
+    label: "Share on Reddit",
+    href: `https://www.reddit.com/submit?url=${u}&title=${st}`,
+  },
+];
 ---
 
 <Base
-  title={`${tool.name} Review & Pricing`}
-  description={`${tool.name}: ${tool.tagline}. Features, pricing, pros & cons, and how it compares.`}
+  title={`${tool.name} Review ${year}: Features, Pricing & Alternatives`}
+  description={`${tool.name}: ${tool.tagline}. Features, pricing, pros & cons, who it's for, and how it compares.`}
 >
-  <!-- Breadcrumb -->
-  <div class="mx-auto max-w-5xl px-4 pt-6 sm:px-6">
-    <nav class="flex items-center gap-1.5 text-sm text-ink-400">
-      <a href="/tools" class="hover:text-brand-600">Tools</a>
-      <span>/</span>
-      <a
-        href={`/categories/${tool.primaryCategory}`}
-        class="hover:text-brand-600">{categoryName(tool.primaryCategory)}</a
-      >
-      <span>/</span>
-      <span class="text-ink-600">{tool.name}</span>
-    </nav>
-  </div>
+  <!-- Hero -->
+  <section class="border-b border-ink-100 bg-white">
+    <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <nav class="flex items-center gap-1.5 text-sm text-ink-400">
+        <a href="/tools" class="hover:text-brand-600">Tools</a>
+        <span>/</span>
+        <a
+          href={`/categories/${tool.primaryCategory}`}
+          class="hover:text-brand-600"
+        >
+          {categoryName(tool.primaryCategory)}
+        </a>
+        <span>/</span>
+        <span class="text-ink-600">{tool.name}</span>
+      </nav>
 
-  <!-- Header -->
-  <section class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-    <div
-      class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between"
-    >
-      <div class="flex items-start gap-4">
-        <ToolBadge badge={tool.badge} website={tool.website} name={tool.name} size="lg" />
-        <div>
-          <h1 class="text-3xl font-bold tracking-tight text-ink-900">
-            {tool.name}
-          </h1>
-          <p class="mt-1 text-ink-500">{tool.tagline}</p>
-          <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Rating value={tool.rating} count={tool.reviewCount} size="md" />
-            <span class="text-sm text-ink-400"
-              >Founded {tool.founded} · {tool.hq}</span
+      <div
+        class="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between"
+      >
+        <div class="flex items-start gap-4">
+          <ToolBadge
+            badge={tool.badge}
+            website={tool.website}
+            name={tool.name}
+            size="lg"
+          />
+          <div>
+            <h1
+              class="text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl"
             >
+              {tool.name}
+              <span class="font-normal text-ink-400">review {year}</span>
+            </h1>
+            <p class="mt-1.5 max-w-xl text-ink-500">{tool.tagline}</p>
+            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <a
+                href={reviewsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-orange-600"
+              >
+                <Icon name="lucide:star" class="h-4 w-4" />
+                Read reviews on G2
+                <Icon name="lucide:external-link" class="h-3.5 w-3.5" />
+              </a>
+              <div class="flex flex-wrap gap-1.5">
+                {
+                  tool.categories.map((c) => (
+                    <a
+                      href={`/categories/${c}`}
+                      class="rounded-full bg-ink-100 px-2.5 py-0.5 text-xs font-medium text-ink-600 hover:bg-orange-50 hover:text-orange-700"
+                    >
+                      {categoryName(c)}
+                    </a>
+                  ))
+                }
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="flex-shrink-0">
         <a
           href={tool.website}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-700"
+          class="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-700"
         >
-          Visit website
-          <svg
-            class="h-4 w-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            ><path
-              d="M7 17 17 7M9 7h8v8"
-              stroke-linecap="round"
-              stroke-linejoin="round"></path></svg
-          >
+          Visit {tool.name}
+          <Icon name="lucide:external-link" class="h-4 w-4" />
         </a>
-      </div>
-    </div>
-
-    <!-- Quick stats -->
-    <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <div class="rounded-2xl border border-ink-100 bg-white p-4">
-        <p class="text-xs font-medium text-ink-400">Starting price</p>
-        <p class="mt-1 font-bold text-ink-900">{formatStartingPrice(tool)}</p>
-      </div>
-      <div class="rounded-2xl border border-ink-100 bg-white p-4">
-        <p class="text-xs font-medium text-ink-400">Budget tier</p>
-        <p class="mt-1 font-bold text-ink-900">
-          {budgetLabel[tool.budgetTier]}
-        </p>
-      </div>
-      <div class="rounded-2xl border border-ink-100 bg-white p-4">
-        <p class="text-xs font-medium text-ink-400">Complexity</p>
-        <p class="mt-1 font-bold text-ink-900">
-          {complexityLabel[tool.complexity]}
-        </p>
-      </div>
-      <div class="rounded-2xl border border-ink-100 bg-white p-4">
-        <p class="text-xs font-medium text-ink-400">Integrations</p>
-        <p class="mt-1 font-bold text-ink-900">{tool.integrationsCount}+</p>
       </div>
     </div>
   </section>
 
-  <section class="mx-auto max-w-5xl px-4 sm:px-6">
-    <div class="grid gap-10 lg:grid-cols-3">
-      <div class="lg:col-span-2">
-        <!-- Overview -->
-        <h2 class="text-xl font-bold text-ink-900">Overview</h2>
-        <p class="mt-3 leading-relaxed text-ink-600">{tool.description}</p>
-
-        <div
-          class="mt-5 rounded-2xl border border-brand-100 bg-brand-50/60 p-5"
-        >
-          <p class="text-sm font-semibold text-brand-800">Best for</p>
-          <p class="mt-1 text-brand-900">{tool.bestFor}</p>
-        </div>
-
-        <!-- Pros & cons -->
-        <div class="mt-10 grid gap-5 sm:grid-cols-2">
-          <div class="rounded-2xl border border-ink-100 p-5">
-            <h3 class="flex items-center gap-2 font-semibold text-emerald-700">
-              <svg
-                class="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                ><path
-                  d="M20 6 9 17l-5-5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path></svg
-              >
-              Pros
-            </h3>
-            <ul class="mt-3 space-y-2">
-              {
-                tool.pros.map((p) => (
-                  <li class="flex gap-2 text-sm text-ink-600">
-                    <span class="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-500" />
-                    {p}
-                  </li>
-                ))
-              }
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-ink-100 p-5">
-            <h3 class="flex items-center gap-2 font-semibold text-rose-600">
-              <svg
-                class="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                ><path
-                  d="M18 6 6 18M6 6l12 12"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path></svg
-              >
-              Cons
-            </h3>
-            <ul class="mt-3 space-y-2">
-              {
-                tool.cons.map((c) => (
-                  <li class="flex gap-2 text-sm text-ink-600">
-                    <span class="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-rose-400" />
-                    {c}
-                  </li>
-                ))
-              }
-            </ul>
-          </div>
-        </div>
-
-        <!-- Features -->
-        <h2 class="mt-10 text-xl font-bold text-ink-900">
-          Features at a glance
-        </h2>
-        <dl class="mt-4 grid gap-2 sm:grid-cols-2">
-          {
-            features.map((f) => {
-              const has = tool.features[f.key];
-              return (
-                <div class="flex items-center gap-3 rounded-xl border border-ink-100 px-4 py-3">
-                  {has ? (
-                    <svg
-                      class="h-5 w-5 flex-shrink-0 text-emerald-500"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.4"
-                    >
-                      <path
-                        d="M20 6 9 17l-5-5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      class="h-5 w-5 flex-shrink-0 text-ink-300"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.4"
-                    >
-                      <path
-                        d="M18 6 6 18M6 6l12 12"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  )}
-                  <span
-                    class={`text-sm ${has ? "font-medium text-ink-800" : "text-ink-400"}`}
-                  >
-                    {f.label}
-                  </span>
-                </div>
-              );
-            })
-          }
-        </dl>
-
-        <!-- Pricing note -->
-        <h2 class="mt-10 text-xl font-bold text-ink-900">Pricing</h2>
-        <div class="mt-3 rounded-2xl border border-ink-100 p-5">
-          <p class="text-2xl font-bold text-ink-900">
-            {formatStartingPrice(tool)}
-          </p>
-          <p class="mt-1 text-sm text-ink-500">{tool.pricingNote}</p>
-        </div>
-      </div>
-
-      <!-- Sidebar -->
-      <aside class="space-y-6">
-        <div class="rounded-2xl border border-ink-100 p-5">
-          <h3 class="text-sm font-semibold text-ink-900">Categories</h3>
-          <div class="mt-3 flex flex-wrap gap-2">
+  <!-- Body + sticky quick-facts -->
+  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div class="lg:grid lg:grid-cols-[1fr_19rem] lg:gap-12">
+      <div class="min-w-0 space-y-12">
+        <!-- Key takeaways -->
+        <div class="rounded-2xl border border-ink-100 bg-ink-50/70 p-6 sm:p-8">
+          <h2
+            class="text-xs font-semibold uppercase tracking-wide text-ink-500"
+          >
+            Key takeaways
+          </h2>
+          <ul class="mt-4 space-y-3">
             {
-              tool.categories.map((c) => (
-                <a
-                  href={`/categories/${c}`}
-                  class="rounded-full bg-ink-50 px-3 py-1 text-xs font-medium text-ink-600 hover:bg-brand-50 hover:text-brand-700"
-                >
-                  {categoryName(c)}
-                </a>
-              ))
-            }
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-ink-100 p-5">
-          <h3 class="text-sm font-semibold text-ink-900">
-            Popular integrations
-          </h3>
-          <ul class="mt-3 space-y-2">
-            {
-              tool.popularIntegrations.map((i) => (
-                <li class="text-sm text-ink-600">{i}</li>
+              takeaways.map((t) => (
+                <li class="flex gap-3 text-sm leading-relaxed text-ink-700">
+                  <Icon
+                    name="lucide:check"
+                    class="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-500"
+                  />
+                  {t}
+                </li>
               ))
             }
           </ul>
         </div>
 
-        <a
-          href={`/alternatives/${tool.slug}`}
-          class="group flex items-center justify-between rounded-2xl border border-ink-100 bg-white p-5 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5"
-        >
-          <div>
-            <h3 class="text-sm font-semibold text-ink-900">
-              Looking for alternatives?
-            </h3>
-            <p class="mt-1 text-sm text-ink-500">
-              See the best {tool.name} alternatives
-            </p>
+        <!-- Overview -->
+        <section>
+          <h2 class="text-xl font-bold text-ink-900">Overview</h2>
+          <div class="mt-3 space-y-4 leading-relaxed text-ink-600">
+            {overviewParagraphs.map((p) => <p>{p}</p>)}
           </div>
-          <span
-            class="text-brand-600 group-hover:translate-x-0.5 transition-transform"
-            aria-hidden="true">&rarr;</span
-          >
-        </a>
+          <div class="mt-5 rounded-2xl border border-ink-100 bg-ink-50/70 p-5">
+            <p class="text-sm font-semibold text-ink-900">Best for</p>
+            <p class="mt-1 text-ink-600">{tool.bestFor}</p>
+          </div>
+        </section>
 
-        {
-          versus.length > 0 && (
-            <div class="rounded-2xl border border-ink-100 p-5">
-              <h3 class="text-sm font-semibold text-ink-900">
-                Compare {tool.name.split(" ")[0]} with…
-              </h3>
-              <ul class="mt-3 space-y-2">
-                {versus.map((v) => (
-                  <li>
-                    <a
-                      href={`/compare/${tool.slug}-vs-${v.slug}`}
-                      class="flex items-center justify-between text-sm text-ink-600 hover:text-brand-700"
-                    >
-                      <span>vs {v.name}</span>
-                      <span aria-hidden="true">&rarr;</span>
-                    </a>
-                  </li>
+        <!-- Who it's for -->
+        <section>
+          <h2 class="text-xl font-bold text-ink-900">Who it's for</h2>
+          {
+            content?.whoFor ? (
+              <div class="mt-3 space-y-4 leading-relaxed text-ink-600">
+                {content.whoFor.map((p) => (
+                  <p>{p}</p>
                 ))}
-              </ul>
-            </div>
+              </div>
+            ) : (
+              <>
+                <ul class="mt-4 space-y-2.5">
+                  {idealFor.map((t) => (
+                    <li class="flex gap-3 text-ink-600">
+                      <Icon
+                        name="lucide:check"
+                        class="mt-1 h-4 w-4 flex-shrink-0 text-orange-500"
+                      />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+                {notFor && (
+                  <div class="mt-5 rounded-2xl border border-ink-100 p-5">
+                    <p class="text-sm font-semibold text-ink-900">
+                      Maybe not the best fit if…
+                    </p>
+                    <p class="mt-1 text-sm text-ink-500">{notFor}</p>
+                  </div>
+                )}
+              </>
+            )
+          }
+        </section>
+
+        <!-- Features -->
+        <section>
+          <h2 class="text-xl font-bold text-ink-900">Features at a glance</h2>
+          <p class="mt-1 text-sm text-ink-400">
+            {tool.name} covers {featureCount} of {features.length} tracked {
+              categoryName(tool.primaryCategory).toLowerCase()
+            } features.
+          </p>
+          <dl class="mt-4 grid gap-2 sm:grid-cols-2">
+            {
+              features.map((f) => {
+                const has = tool.features[f.key];
+                return (
+                  <div class="flex items-center gap-3 rounded-xl border border-ink-100 px-4 py-3">
+                    {has ? (
+                      <Icon
+                        name="lucide:check"
+                        class="h-5 w-5 flex-shrink-0 text-emerald-500"
+                      />
+                    ) : (
+                      <Icon
+                        name="lucide:x"
+                        class="h-5 w-5 flex-shrink-0 text-ink-300"
+                      />
+                    )}
+                    <span
+                      class={`text-sm ${has ? "font-medium text-ink-800" : "text-ink-400"}`}
+                    >
+                      {f.label}
+                    </span>
+                  </div>
+                );
+              })
+            }
+          </dl>
+        </section>
+
+        <!-- Features in depth -->
+        {
+          content?.features && content.features.length > 0 && (
+            <section>
+              <h2 class="text-xl font-bold text-ink-900">
+                {tool.name} features in depth
+              </h2>
+              <div class="mt-5 space-y-6">
+                {content.features.map((f) => (
+                  <div>
+                    <h3 class="font-semibold text-ink-900">{f.title}</h3>
+                    <p class="mt-1.5 leading-relaxed text-ink-600">{f.body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
           )
         }
+
+        <!-- Pros & cons -->
+        <section>
+          <h2 class="text-xl font-bold text-ink-900">Pros &amp; cons</h2>
+          <div class="mt-4 grid gap-5 sm:grid-cols-2">
+            <div class="rounded-2xl border border-ink-100 p-5">
+              <h3
+                class="flex items-center gap-2 font-semibold text-emerald-700"
+              >
+                <Icon name="lucide:thumbs-up" class="h-5 w-5" /> Strengths
+              </h3>
+              <ul class="mt-3 space-y-2">
+                {
+                  tool.pros.map((p) => (
+                    <li class="flex gap-2 text-sm text-ink-600">
+                      <span class="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-500" />
+                      {p}
+                    </li>
+                  ))
+                }
+              </ul>
+            </div>
+            <div class="rounded-2xl border border-ink-100 p-5">
+              <h3 class="flex items-center gap-2 font-semibold text-rose-600">
+                <Icon name="lucide:thumbs-down" class="h-5 w-5" /> Limitations
+              </h3>
+              <ul class="mt-3 space-y-2">
+                {
+                  tool.cons.map((c) => (
+                    <li class="flex gap-2 text-sm text-ink-600">
+                      <span class="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-rose-400" />
+                      {c}
+                    </li>
+                  ))
+                }
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- What users say (real, sourced review) -->
+        {
+          review && (
+            <section>
+              <h2 class="text-xl font-bold text-ink-900">What users say</h2>
+              <figure class="mt-4 rounded-2xl border border-ink-100 bg-ink-50/70 p-6 sm:p-8">
+                <Icon name="lucide:quote" class="h-6 w-6 text-orange-400" />
+                <blockquote class="mt-3 text-lg leading-relaxed text-ink-800">
+                  {review.quote}
+                </blockquote>
+                <figcaption class="mt-4 text-sm text-ink-500">
+                  , {review.author}
+                  {review.role ? `, ${review.role}` : ""} ·{" "}
+                  <a
+                    href={review.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="font-medium text-brand-600 hover:text-orange-600"
+                  >
+                    via {review.source}
+                  </a>
+                </figcaption>
+              </figure>
+            </section>
+          )
+        }
+
+        <!-- Pricing -->
+        <section>
+          <h2 class="text-xl font-bold text-ink-900">Pricing</h2>
+          <div class="mt-4 rounded-2xl border border-ink-100 p-6">
+            <div class="flex flex-wrap items-end gap-x-6 gap-y-3">
+              <div>
+                <p class="text-xs font-medium text-ink-400">Starting price</p>
+                <p class="text-2xl font-bold text-ink-900">
+                  {formatStartingPrice(tool)}
+                </p>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-ink-400">Free plan</p>
+                <p class="font-semibold text-ink-900">
+                  {tool.features.freePlan ? "Yes" : "No"}
+                </p>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-ink-400">Budget tier</p>
+                <p class="font-semibold text-ink-900">
+                  {budgetLabel[tool.budgetTier]}
+                </p>
+              </div>
+            </div>
+            <p class="mt-4 border-t border-ink-100 pt-4 text-sm text-ink-500">
+              {tool.pricingNote}
+            </p>
+          </div>
+          {
+            content?.pricingValue && (
+              <p class="mt-4 leading-relaxed text-ink-600">
+                {content.pricingValue}
+              </p>
+            )
+          }
+        </section>
+
+        <!-- Integrations -->
+        <section>
+          <h2 class="text-xl font-bold text-ink-900">Integrations</h2>
+          {
+            content?.integrations && (
+              <p class="mt-3 leading-relaxed text-ink-600">
+                {content.integrations}
+              </p>
+            )
+          }
+          <p class="mt-4 text-sm text-ink-400">
+            {tool.integrationsCount}+ integrations, including:
+          </p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            {
+              tool.popularIntegrations.map((i) => (
+                <span class="rounded-lg border border-ink-100 bg-white px-3 py-1.5 text-sm text-ink-700">
+                  {i}
+                </span>
+              ))
+            }
+          </div>
+        </section>
+
+        <!-- Bottom line -->
+        <section>
+          <div
+            class="rounded-2xl bg-gradient-to-br from-ink-900 to-ink-800 p-6 text-white sm:p-8"
+          >
+            <h2 class="text-xl font-bold">The bottom line</h2>
+            <p class="mt-3 text-ink-200">
+              {content?.verdict ?? tool.bestFor} A {
+                categoryName(tool.primaryCategory).toLowerCase()
+              } tool with plans from {formatStartingPrice(tool).toLowerCase()}.
+            </p>
+            <a
+              href={tool.website}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              class="mt-5 inline-block rounded-xl bg-white px-5 py-2.5 font-semibold text-ink-900 transition hover:bg-ink-100"
+            >
+              Visit {tool.name} &rarr;
+            </a>
+          </div>
+        </section>
+
+        <!-- Compare with -->
+        {
+          compareWith.length > 0 && (
+            <section>
+              <h2 class="text-xl font-bold text-ink-900">
+                Compare {tool.name} with…
+              </h2>
+              <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                {compareWith.map((t) => (
+                  <a
+                    href={`/compare/${tool.slug}-vs-${t.slug}`}
+                    class="group flex items-center justify-between rounded-2xl border border-ink-100 bg-white p-4 transition hover:border-orange-300 hover:shadow-lg hover:shadow-orange-500/10"
+                  >
+                    <div class="flex items-center gap-2.5">
+                      <ToolBadge
+                        badge={tool.badge}
+                        website={tool.website}
+                        name={tool.name}
+                        size="sm"
+                      />
+                      <span class="text-xs font-bold text-ink-300">VS</span>
+                      <ToolBadge
+                        badge={t.badge}
+                        website={t.website}
+                        name={t.name}
+                        size="sm"
+                      />
+                    </div>
+                    <span class="text-sm font-medium text-ink-700 group-hover:text-orange-600">
+                      vs {t.name.split(" ")[0]} &rarr;
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )
+        }
+
+        <!-- Guides mentioning -->
+        {
+          guides.length > 0 && (
+            <section>
+              <h2 class="text-xl font-bold text-ink-900">
+                Guides mentioning {tool.name}
+              </h2>
+              <div class="mt-4 space-y-3">
+                {guides.map((a) => (
+                  <a
+                    href={`/resources/${a.id}`}
+                    class="group flex items-center justify-between gap-4 rounded-2xl border border-ink-100 bg-white p-4 transition hover:border-orange-300 hover:shadow-lg hover:shadow-orange-500/10"
+                  >
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span
+                          class={`rounded-full px-2 py-0.5 text-xs font-semibold ${tagColor(a.data.tag)}`}
+                        >
+                          {a.data.tag}
+                        </span>
+                        <span class="text-xs text-ink-400">
+                          {fmtDate(a.data.date)}
+                        </span>
+                      </div>
+                      <p class="mt-1.5 font-semibold text-ink-900 group-hover:text-orange-600">
+                        {a.data.title}
+                      </p>
+                    </div>
+                    <span
+                      class="text-ink-300 group-hover:text-orange-600"
+                      aria-hidden="true"
+                    >
+                      &rarr;
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )
+        }
+
+        <!-- FAQ -->
+        <section>
+          <h2 class="text-xl font-bold text-ink-900">
+            Frequently asked questions
+          </h2>
+          <div class="mt-4 divide-y divide-ink-100 border-t border-ink-100">
+            {
+              faqs.map((f) => (
+                <div class="py-5">
+                  <h3 class="font-semibold text-ink-900">{f.q}</h3>
+                  <p class="mt-2 leading-relaxed text-ink-600">{f.a}</p>
+                  {f.href && (
+                    <a
+                      href={f.href}
+                      class="mt-2 inline-block text-sm font-medium text-brand-600 transition hover:text-orange-600"
+                    >
+                      See all {tool.name} alternatives &rarr;
+                    </a>
+                  )}
+                </div>
+              ))
+            }
+          </div>
+        </section>
+      </div>
+
+      <!-- Sticky quick facts -->
+      <aside class="mt-10 lg:mt-0">
+        <div class="sticky top-24 space-y-5">
+          <div class="rounded-2xl border border-ink-100 bg-white p-5">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-ink-400"
+            >
+              At a glance
+            </p>
+            <dl class="mt-4 space-y-3">
+              {
+                facts.map((f) => (
+                  <div class="flex items-center gap-3">
+                    <Icon
+                      name={`lucide:${f.icon}`}
+                      class="h-4 w-4 flex-shrink-0 text-ink-400"
+                    />
+                    <dt class="text-sm text-ink-500">{f.label}</dt>
+                    <dd class="ml-auto text-sm font-semibold text-ink-900">
+                      {f.value}
+                    </dd>
+                  </div>
+                ))
+              }
+            </dl>
+            <a
+              href={tool.website}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              class="mt-5 block rounded-xl bg-brand-600 px-4 py-2.5 text-center font-semibold text-white transition hover:bg-brand-700"
+            >
+              Visit website
+            </a>
+            <a
+              href={reviewsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-ink-200 px-4 py-2.5 text-center text-sm font-medium text-ink-700 transition hover:border-ink-300"
+            >
+              <Icon name="lucide:star" class="h-4 w-4" />
+              Reviews on G2
+            </a>
+            <a
+              href={`/alternatives/${tool.slug}`}
+              class="mt-2 block rounded-xl border border-ink-200 px-4 py-2.5 text-center text-sm font-medium text-ink-700 transition hover:border-ink-300"
+            >
+              See alternatives
+            </a>
+          </div>
+
+          <div class="flex items-center gap-2 px-1">
+            <span class="text-xs font-medium text-ink-400">Share</span>
+            {
+              shares.map((s) => (
+                <a
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink-200 text-ink-500 transition hover:border-ink-300 hover:text-ink-900"
+                >
+                  <Icon name={s.icon} class="h-4 w-4" />
+                </a>
+              ))
+            }
+          </div>
+        </div>
       </aside>
     </div>
-  </section>
+  </div>
 
-  <!-- Related -->
+  <!-- Similar tools -->
   {
-    related.length > 0 && (
-      <section class="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-        <h2 class="text-xl font-bold text-ink-900">Similar tools</h2>
-        <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {related.map((t) => (
-            <ToolCard tool={t} />
-          ))}
+    similar.length > 0 && (
+      <section class="border-t border-ink-100 bg-white">
+        <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <h2 class="text-3xl font-semibold text-ink-900">Similar tools</h2>
+          <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {similar.map((t) => (
+              <ToolCard tool={t} />
+            ))}
+          </div>
         </div>
       </section>
     )
   }
+
+  <Newsletter />
 </Base>

@@ -31,7 +31,7 @@ const faqs = [
   {
     q: `What is the best alternative to ${tool.name}?`,
     a: topAlt
-      ? `Our top-rated alternative to ${tool.name} is ${topAlt.name} (${topAlt.rating.toFixed(1)}/5). The best fit depends on your budget and feature needs, compare them side by side to decide.`
+      ? `A strong alternative to ${tool.name} is ${topAlt.name}. The best fit depends on your budget and feature needs, so compare them side by side to decide.`
       : `We don't currently track a direct alternative to ${tool.name} in the same category.`,
   },
   {
@@ -72,7 +72,7 @@ const faqs = [
           <p class="mt-2 max-w-2xl text-ink-500">
             {alternatives.length}
             {categoryName(tool.primaryCategory).toLowerCase()} tools worth considering
-            instead of {tool.name}, ranked by our editorial score. Or
+            instead of {tool.name}, in the same category. Or
             <a
               href={`/tools/${tool.slug}`}
               class="font-medium text-brand-600 hover:underline"
